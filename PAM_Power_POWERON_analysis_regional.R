@@ -9,15 +9,9 @@
 
 # loading packages
 rm(list=ls())
-#gc()
-#.libPaths()
 require(raster)
 library(ggplot2)
 library(viridis)
-# url <- "https://download.r-forge.r-project.org/bin/windows/contrib/4.4/rgdal_1.6-7.zip"
-# install.packages(url, type="source", repos=NULL)
-# require(rgdal)
-# library(rgeos)
 require(sf)
 require(sp)
 library(tibble)
@@ -37,18 +31,12 @@ require(terra)
 require(ggplot2)
 require(RColorBrewer)
 
-BigStart <- Sys.time()
-#set.seed(2179155) # for reproducibility
-
-# loading functions
-source("PAM_Power_analysis_functions.R")
-
 ##### Step 0 - all the parameters #######
 #########################################
 
 # how many years of post-construction monitoring/operation
 # note that >5 years will require generating more realization maps 
-# delivering code to do that is not part of thos project
+# delivering code to do that is not part of this project
 NmonitoringYears <- 5
 
 #how many realization maps we use
@@ -57,23 +45,23 @@ NmonitoringYears <- 5
 # Roberts et al models have all covariates in lat and long so there will be a lot reshuffling between projections
 newproj <- "+proj=utm +zone=18 +datum=WGS84 +units=m +no_defs"
 newprojLatLong <-  "+proj=aea +lat_0=34 +lon_0=-78 +lat_1=27.3333333333333 +lat_2=40.6666666666667 +x_0=0 +y_0=0 +datum=WGS84
-+units=m +no_defs" # taken from Jason's maps
++units=m +no_defs" # taken from Jason Roberts et al maps
 
-# which species (FW - fin whale, MW - minke whale, SW - sei whale, NA - north Altantic)
+# which species (FW - fin whale, MW - minke whale, SW - sei whale, NA - north Atlantic right whale)
 
 species <- "NA"
 
 # which windfarm, for regional analysis it is only one
-# so dont change it
+# so don't change it
 
 windfarm <- "all"
 
 # which PAM grid design: 
 
-PAM <- "Original" #as given by Julia
-PAM <- "Original_Large"
-PAM <- "Original_Large_POWmoved"
-# parameters related to making N realisation maps of the baseline abundance from Jason's model
+PAM <- "Original" #as given by Julia Dombrowski
+PAM <- "Original_Large" # as above supplemented by few PAMs from large network presented in Van Parijs et al
+PAM <- "Original_Large_POWmoved" # as above but with some POWERON devices serving as large network
+# parameters related to making N realization maps of the baseline abundance from Jason Roberts et al model
 
 if (NmonitoringYears == 5) N <- 250 # this is final number of realization maps
 
@@ -118,8 +106,8 @@ maxDist <- 100 * 1000 # maximum displacement distance for whales over 1 month (h
 pop_decline <- 0.05
 
 # parameters related to parallel computing
-#parallel::stopCluster(cl = mycluster)
-# make sure you dont use all your cores
+# make sure you don't use all your cores
+
 parallel::detectCores()
 numCores <- parallel::detectCores() - 6
 
@@ -145,19 +133,10 @@ fw4 <- raster("GIS/Density_04.img")
 
 # windfarm footprint and buffer
 
-# loading windfarm outlines, different for each year of monitoring operation
-# but we agreed to run one simulation for 2029
-# I leave the other one in the code
+# loading windfarm outlines
+# we decided to run simulation as for year 2029
 
-# wind_foot24 <- read_sf("GIS/WELAs_24_projected.shp")
-# wind_foot25 <- read_sf("GIS/WELAs_24-25_projected.shp")
-# wind_foot26 <- read_sf("GIS/WELAs_24-26_projected.shp")
-# wind_foot27 <- read_sf("GIS/WELAs_24-27_projected.shp")
-# wind_foot28 <- read_sf("GIS/WELAs_24-28_projected.shp")
 wind_foot29 <- read_sf("GIS/WELAs_24-29_projected.shp")
-# wind_foot30 <- read_sf("GIS/WELAs_24-30_projected.shp")
-# wind_foot31 <- read_sf("GIS/WELAs_24-31_projected.shp")
-
 
 if (PAM == "Original") {
   pamAllLL <-  read_sf("GIS/Devices_for_power_analysis_MainPower.shp")
@@ -200,29 +179,13 @@ if (PAM == "Original_Large_POWmoved") {
 
 
 # it is better if all data are in utm. Polygon already is so I will only convert the raster
-# but because Jason Roberts's covariates are in lat long and I make map realisations in lat long, I have to stick to lat long for now and only later convert into utm
+# but because Jason Roberts et al covariates are in lat long and I make map realizations in lat long, I have to stick to lat long for now and only later convert into utm
 # windfarms are already in lat long but I transform it anyway
 
-# wind_foot24LL <- st_transform(wind_foot24, newprojLatLong)
-# wind_foot25LL <- st_transform(wind_foot25, newprojLatLong)
-# wind_foot26LL <- st_transform(wind_foot26, newprojLatLong)
-# wind_foot27LL <- st_transform(wind_foot27, newprojLatLong)
-# wind_foot28LL <- st_transform(wind_foot28, newprojLatLong)
 wind_foot29LL <- st_transform(wind_foot29, newprojLatLong)
-# wind_foot30LL <- st_transform(wind_foot30, newprojLatLong)
-# wind_foot31LL <- st_transform(wind_foot31, newprojLatLong)
-
-# changing to sp objects as many functions do not work for sf
-# wind_foot24LLsp <- sf:::as_Spatial(wind_foot24LL)
-# wind_foot25LLsp <- sf:::as_Spatial(wind_foot25LL)
-# wind_foot26LLsp <- sf:::as_Spatial(wind_foot26LL)
-# wind_foot27LLsp <- sf:::as_Spatial(wind_foot27LL)
-# wind_foot28LLsp <- sf:::as_Spatial(wind_foot28LL)
 wind_foot29LLsp <- sf:::as_Spatial(wind_foot29LL)
-# wind_foot30LLsp <- sf:::as_Spatial(wind_foot30LL)
-# wind_foot31LLsp <- sf:::as_Spatial(wind_foot31LL)
 
-# cropping big Jason's raster map to the study site
+# cropping big raster map from Jason Roberts et al to the study site
 ee <- extent(wind_foot29LL)
 ee[3] <- ee[3]-60000
 ee[4] <- ee[4]+60000
@@ -244,7 +207,7 @@ plot(pamAllLLSS, add=T, pch=16, col="red")
 ### Step 2 Generating n realization of density map
 ###############################################################################################################
 
-# Generation of 1250 (NmonitoringYears * N) realization maps from Jason Roberts's models is all done in a separate, 
+# Generation of 1250 (NmonitoringYears * N) realization maps from Jason Roberts et al models is all done in a separate, 
 # species - specific code. Generating more realizations would require access to all model covariates
 # and model specifications and both require additional permission from Jason Roberts.
 # Delivering these input data is not part of the project and here we provide 250 realizations maps per year for each species 
@@ -264,11 +227,6 @@ if (species == "MW") {load("BaselineRealisationMaps/MinkeWhale/Dens_SS_operation
 #          Generating change in distribution - H8 - global decline
 #################################################################################################################################
 
-# because the method from Saana not only takes ages but also generates a massive file, I am going to do it differently
-# as we are analyzing a large area, we assume that for H7, all whales which are at the footprints of the lease sites, are just gone
-# if I try to redistribute them, they would all go very far from the sites as all sites are as one polygon
-
-# testing some simpler option
 # first finding all grids which overlap with 100km buffer from all sites but not overlapping with footprint
 # and identify the one which are >= mean.
 # I then add the whales which overlap with footprint (the one which should be displayed) to these grids which are >=mean
@@ -278,27 +236,10 @@ if (species == "MW") {load("BaselineRealisationMaps/MinkeWhale/Dens_SS_operation
 # which overlap with wind farm and the one which overlap with buffer but not wind farm
 # I do it for each year of operation
 
-# wind_foot24LL100 <- terra::buffer(wind_foot24LLsp, width=maxDist)
-# wind_foot25LL100 <- terra::buffer(wind_foot25LLsp, width=maxDist)
-# wind_foot26LL100 <- terra::buffer(wind_foot26LLsp, width=maxDist)
-# wind_foot27LL100 <- terra::buffer(wind_foot27LLsp, width=maxDist)
-# wind_foot28LL100 <- terra::buffer(wind_foot28LLsp, width=maxDist)
 wind_foot29LL100 <- terra::buffer(wind_foot29LLsp, width=maxDist)
-# wind_foot30LL100 <- terra::buffer(wind_foot30LLsp, width=maxDist)
-# wind_foot31LL100 <- terra::buffer(wind_foot31LLsp, width=maxDist)
 
 plot(studySite)
 plot(wind_foot29LL100, add=T)
-
-# putting all these footprint objects to a list so I can loop over them later
-# it made sense when we were planning to run different windfarm operating at each year 
-# I leave the commented code for now 
-
-# wind_footLLBuffer <- ls(pattern = "LL100")
-# wind_footLLBuffer <- lapply(wind_footLLBuffer, function(x) {get(x)})
-# 
-# wind_footLL <- ls(pattern = "LLsp")
-# wind_footLL <- lapply(wind_footLL, function(x) {get(x)})
 
 wind_footLLBuffer <- wind_foot29LL100
 wind_footLL <- wind_foot29LLsp
@@ -428,32 +369,30 @@ pamAllLLSSDF$id <- c(1:nrow(pamAllLLSSDF))
 
 # making final plot for the report
 # with species in the title and an example of distribution in January
-# and pam devices colour coded by Poweron and no poweron
-
-#janEx <- Dens_SS_operationDF[[1]][[15]]
-#rm(Dens_SS_operationDF)
+# and pam devices colour coded by Poweron and no Poweron
 
 # getting land
 land <- read_sf("GIS/ne_10m_land.shp")
 land <- st_transform(land, newprojLatLong)
 land <- st_crop(land,ee)
 
-# buffPlot <- ggplot(janEx)+
-#   geom_tile(data=janEx,aes(x=x, y=y,fill=DensOp_base))+
-#   scale_fill_viridis(alpha=0.8,option="rocket", direction=-1,na.value="white")+
-#   geom_sf(data=land, col="grey")+
-#   geom_sf(data=wind_foot29LL, col="black", fill="orange", alpha=0.7)+
-#   geom_sf(data=pamAllLLSS, col="darkblue", size=0.4)+
-#   geom_sf(data=pamBufferAllsf, col="black", fill=NA)+
-#   labs(fill=expression(paste("ind/25 ",km^{2})))+
-#   ggtitle(species)+
-#   theme_bw()+
-#   theme(legend.position="bottom")
+buffPlot <- ggplot(janEx)+
+  geom_tile(data=janEx,aes(x=x, y=y,fill=DensOp_base))+
+  scale_fill_viridis(alpha=0.8,option="rocket", direction=-1,na.value="white")+
+  geom_sf(data=land, col="grey")+
+  geom_sf(data=wind_foot29LL, col="black", fill="orange", alpha=0.7)+
+  geom_sf(data=pamAllLLSS, col="darkblue", size=0.4)+
+  geom_sf(data=pamBufferAllsf, col="black", fill=NA)+
+  labs(fill=expression(paste("ind/25 ",km^{2})))+
+  ggtitle(species)+
+  theme_bw()+
+  theme(legend.position="bottom")
 
-# ggsave(buffPlot, file=paste("Analysis/",species,"/",PAM,"PAM_withBuffers.png", sep=""),
-#        width=15,
-#        height=15,
-#        units = "cm")
+ggsave(buffPlot, file=paste("Analysis/",species,"/",PAM,"PAM_withBuffers.png", sep=""),
+       width=15,
+       height=15,
+       units = "cm")
+
 ### I have to first make rasters with shifted cues for all hypothesis
 
 # for Base, we only use N simulations, no matter number of monitoring months
@@ -532,7 +471,7 @@ CalculateMeanCuePerPam <- function(df){
 }
 
 
-# because this computer tents to crash from time to time, I will make a separate loop for each hypothesis, it takes about 4-5 min per version of hypothesis (set of rasters) for 
+# because the beelow analysis is computationally heavy, I will make a separate loop for each hypothesis, it takes about 4-5 min per version of hypothesis (set of rasters) for 
 # piling hypothesis
 
 parallel::stopCluster(cl = mycluster)
@@ -975,30 +914,13 @@ extractingFromBamH1 <- function(InputData){
   
   return(c(pDist_CloseOn0,pDist_CloseOn1))
 }
-# parallel::stopCluster(cl = mycluster)
-# 
-# mycluster <- parallel::makeCluster(
-#   numCores, 
-#   type = "PSOCK",
-#   outfile=""
-# )
-# doParallel::registerDoParallel(cl = mycluster)	
 
-# ok, the below does not work in parallel system and I dont know why
-# I think it has something to do with using te(x,y)
-# ss <- Sys.time()
-# pss_H6_all<- foreach (i = 1:N)  %dopar% { extractingFromGam(PG_H6[[i]])}
-# pss_H7_all<- foreach (i = 1:N)  %dopar% { extractingFromGam(PG_H7[[i]])}
-# 
-# e <- Sys.time()
-# e-s
 pss_H1_all <- list()
 pss_H6_all <- list()
 pss_H7_all <- list()
 pss_H8_all <- list()
-# doing all three at the same time crushes the machine
 
-for (i in 1:length(PG_H1)){#length(PG_H1)
+for (i in 1:length(PG_H1)){
   pss_H1_all[[i]] <- extractingFromBamH1(PG_H1[[i]])
   print(i)
 }
@@ -1027,9 +949,9 @@ for (i in 1:length(PG_H8)){
 save(pss_H8_all, file=paste("Analysis/",species,"/",PAM,"pss_H8_all.RData", sep=""))
 
 # calculating power: proportion of models where:
-# For H6 and H7 interaction (s(Dist, by=close_sensor_andON) is significant, we dont care about the rest
+# For H6 and H7 interaction (s(Dist, by=close_sensor_andON) is significant
 # For H8 interaction is not significant, but year is
-# For H1 interaction is significant but should not 
+# For H1 interaction is significant but should not be
 
 PG_power67 <- function(x){
   x1 <- do.call("rbind.data.frame",x)
@@ -1075,4 +997,4 @@ PG_results$PAM <- PAM
 PG_results
 
 save(PG_results, file=paste("Analysis/",species,"/",PAM,"PG_results_allPAM.RData", sep=""))
-Sys.time()
+
